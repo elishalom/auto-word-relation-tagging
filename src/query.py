@@ -190,20 +190,19 @@ def calculateMostProbableRelations(terms, topn=50, num_results_per_query=200):
             
     print('Finished loading word frequencies dictionary')
     
+    termsSet = set([word.lower() for term in terms for word in term.split()])
+    
     termCounters = [termCounter(elaticsearch, x, num_results_per_query, stop_words) for x in terms]
-    allTerms = reduce(lambda s1, s2: s1 | s2, map(lambda d: d.keys(), termCounters))
+    allTerms = reduce(lambda s1, s2: s1 | s2, map(lambda d: d.keys(), termCounters)) - termsSet
     allDict = {}
 
     for term in allTerms:
-      appearances = 0
       product = 1
       for termc in termCounters:
         currentCount = termc.get(term)
         if(currentCount != None):
-          appearances += 1
           product *= getTfIdf(term, currentCount, totalDocuments, frequencies)
-      if appearances >= len(termCounters):
-        allDict[term] = product
+      allDict[term] = product
     
     sortedResult = sorted(allDict.items(), key=operator.itemgetter(1), reverse=True)
     
@@ -215,9 +214,28 @@ def calculateMostProbableRelations(terms, topn=50, num_results_per_query=200):
 
 terms = ['Paris France', 'Dakar Senegal', 'Santiago Chile', 'Ottawa Canada', 'Moscow Russia', 'Jerusalem Israel', 'Vienna Austria', 'Kiev Ukraine']
 
+
+terms = ['Austria city', 'Austria capital', 'Austria region', 'Austria region', 'Austria location', 'Austria national', 'Austria international', 'Austria country']
+
+terms = ['Israel city', 'Israel capital', 'Israel region', 'Israel region', 'Israel location', 'Israel national', 'Israel international', 'Israel country']
+
+terms = ['Jordan city', 'Jordan capital', 'Jordan region', 'Jordan region', 'Jordan location', 'Jordan national', 'Jordan international', 'Jordan country']
+
+terms = ['Senegal city', 'Senegal capital', 'Senegal region', 'Senegal region', 'Senegal location', 'Senegal national', 'Senegal international', 'Senegal country']
+
 #terms = ['Ukraine Chernobyl', 'Japan earthquake', 'USA tornado', 'Japan Fukushima']
 
 #terms = ['USA Trump', 'Russia Putin', 'France Macron', 'Turkey Erdoğan']
+
+#terms = ['Samsung Galaxy', 'Apple iPhone']
+
+#terms = ['Google Android', 'Apple IOS', 'Microsoft Windows']
+
+#terms = ['Germany Europe', 'Congo Africa', 'China Asia', 'Japan Asia', 'France Europe', 'Ethiopia Africa', 'India Asia', 'Chile America', 'Argentina America', 'Sudan Africa', 'Uganda Africa']
+
+#terms = ['Owl Strigiformes', 'Giraffe Artiodactyla', 'Elephant Proboscidea', 'Dolphin Cetartiodactyla']
+
+#terms = ['Owl Strigiformes', 'Elephant Proboscidea', 'Dolphin Cetartiodactyla']
 
 #terms = ['Paris France', 'Jerusalem Israel']
 
