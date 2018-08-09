@@ -45,7 +45,9 @@ class PairsFinder(object):
         
         labels = producer.calculateMostProbableRelations(terms)
         
-        print(labels)
+        print("Most probable labels: ")
+        for label in labels:
+            print(label)
 
     def __create_pairs_evaluator(self, source_word, target_word):
         return PairsEvaluator(self.__model, source_word, target_word)
