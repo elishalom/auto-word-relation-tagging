@@ -1,3 +1,5 @@
+pygraphviz
+networkx
 numpy
 scikit-learn
 scipy
