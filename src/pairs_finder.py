@@ -10,6 +10,7 @@ from gensim.models.keyedvectors import Word2VecKeyedVectors
 from networkx.drawing.nx_agraph import write_dot
 
 from pairs_evaluator import PairsEvaluator
+from label_producer import LabelProducer
 
 THE_MODEL = api.load('glove-wiki-gigaword-50')
 
@@ -56,11 +57,20 @@ class PairsFinder(object):
         g = g.subgraph(v for v, degree in g.degree if degree > 0)
 
         write_dot(g, 'my_dot.dot')
-        pprint(list(g.edges))
-        return list(g.edges)
+        terms = list(g.edges)
+        #pprint(terms)
+
+        producer = self.__create_label_producer()
+        
+        labels = producer.calculate_most_probable_relations(terms)
+
+        return labels
 
     def __create_pairs_evaluator(self, source_word, target_word):
         return PairsEvaluator(self.__model, source_word, target_word)
+
+    def __create_label_producer(self):
+        return LabelProducer()
 
     def __find_similar_targets(self, similar_source: str, source_word: str,
                                target_word: str, num_of_words: int = 20) -> List[str]:
