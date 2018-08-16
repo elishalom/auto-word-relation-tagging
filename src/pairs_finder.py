@@ -61,7 +61,7 @@ class PairsFinder(object):
 
         return labels
     
-    def analogy(self, source_A, target_A, source_B, topn=10):
+    def analogy(self, source_A, target_A, source_B, topn=5):
         labels = self.find(source_A, target_A)
         terms = []
         for i in range(topn):
