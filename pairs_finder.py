@@ -1,17 +1,14 @@
 from itertools import chain
 from operator import itemgetter
-from pprint import pprint
 from typing import List
 
 import fire
 import gensim.downloader as api
 import networkx as nx
 from gensim.models.keyedvectors import Word2VecKeyedVectors
-from networkx.drawing.nx_agraph import write_dot
 
+from distance_metric import DistanceMetric
 from pairs_evaluator import PairsEvaluator
-
-THE_MODEL = api.load('glove-wiki-gigaword-50')
 
 
 class PairsFinder(object):
@@ -20,7 +17,7 @@ class PairsFinder(object):
 
     def __init__(self) -> None:
         super().__init__()
-        self.__model: Word2VecKeyedVectors = THE_MODEL
+        self.__model: Word2VecKeyedVectors = api.load(self.__DEFAULT_MODEL_NAME)
 
     def find(self, word1, word2):
         source_word = word1
@@ -38,7 +35,8 @@ class PairsFinder(object):
                                   key=lambda similar_target: evaluator.distance(similar_source, similar_target))[:1]
             for best_target in best_targets:
                 if evaluator.are_similar(similar_source, best_target):
-                    g.add_edge(similar_source, best_target, weight=evaluator.get_distance(similar_source, best_target))
+                    g.add_edge(similar_source, best_target, weight=evaluator.distance(similar_source, best_target,
+                                                                                      metric=DistanceMetric.COSINE))
 
         g: nx.DiGraph = g.subgraph(v for v, degree in g.degree if degree <= 4).copy()
 
@@ -52,11 +50,8 @@ class PairsFinder(object):
             g.remove_edges_from([(s, t) for s, t in g.in_edges(target) if s != source])
             g.remove_edges_from(list(g.out_edges(source)))
 
-        nx.set_edge_attributes(g, nx.get_edge_attributes(g, 'weight'), 'label')
         g = g.subgraph(v for v, degree in g.degree if degree > 0)
 
-        write_dot(g, 'my_dot.dot')
-        pprint(list(g.edges))
         return list(g.edges)
 
     def __create_pairs_evaluator(self, source_word, target_word):
