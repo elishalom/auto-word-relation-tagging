@@ -1,0 +1,8 @@
+pygraphviz
+networkx
+numpy
+scikit-learn
+scipy
+tqdm == 4.23.4
+gensim == 3.5.0
+fire
