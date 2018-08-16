@@ -1,7 +1,6 @@
 import nltk
 import math
 import operator
-import time
 import pickle
 import requests
 import wikipedia
@@ -29,12 +28,11 @@ class LabelProducer(object):
         
         Args:
             term: a string to use for querying wikipedia to get relevant documents
+        
+        Returns:
+            A list of page titles related to the given term
         """
         page_titles = []
-        #res = requests.get("http://en.wikipedia.org/w/api.php?action=query&format=json&list=search&srprop&srlimit=20&formatversion=2&srsearch=" + 
-        #                   "|".join(term.split(" ")))
-        #for item in res.json()['query']['search']:
-        #    page_titles.append(item['title'])
         page_titles = wikipedia.search(term)[:self.__EXTRACTS_PER_TERM]
         return page_titles
     
@@ -50,11 +48,12 @@ class LabelProducer(object):
             List of sentences found that contain all the words
         """
         titles = self.__get_wiki_page_list(term=term)
-        res = requests.get("https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exlimit=max&exintro&explaintext&formatversion=2&titles=" + 
-                           "|".join(titles))
         result = []
-        term_tokens = term.split(' ')
-        try:
+        
+        if len(titles) > 0:
+            res = requests.get("https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exlimit=max&exintro&explaintext&formatversion=2&titles=" + 
+                               "|".join(titles))
+            term_tokens = term.split(' ')
             pages = res.json()['query']['pages']
             for item in pages:
               try:
@@ -70,8 +69,6 @@ class LabelProducer(object):
                     result += [sentence]
               except Exception as e:
                 print(e)
-        except Exception as e:
-            pass
         return result
     
     def __get_term_frequency(self, term):
@@ -94,8 +91,6 @@ class LabelProducer(object):
         Args:
             term: the term to calculate tf/idf of
             count: the term frequency
-            totalDocuments: the total number of documents
-            frequencies: a dictionary that maps a word to its frequency in a corpus
             
         Returns:
             The tf/idf value for the given term
@@ -128,6 +123,7 @@ class LabelProducer(object):
         Args:
             text: the text to tokenize
             stop_words: a list of words to filter out
+            
         Returns:
             text after tokenization, conversion to lowercase and filtering of words
             using the filterWords function
@@ -161,6 +157,7 @@ class LabelProducer(object):
         Args:
             terms: a list of 2-tuples which are terms to search labels for
             topn: number of labels to return
+            
         Returns:
             A list of 'topn' labels which represent the relations between the words
             in the terms sorted in descending order of probablity
@@ -196,9 +193,9 @@ class LabelProducer(object):
         for term in all_terms:
           product = 1
           for termc in term_counters:
-            currentCount = termc.get(term)
-            if(currentCount != None):
-              product *= self.__get_tf_idf(term, currentCount)
+            current_count = termc.get(term)
+            if(current_count != None):
+              product *= self.__get_tf_idf(term, current_count)
           all_dict[term] = product
         
         sorted_result = sorted(all_dict.items(), key=operator.itemgetter(1), reverse=True)
