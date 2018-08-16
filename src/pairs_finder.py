@@ -60,6 +60,18 @@ class PairsFinder(object):
         labels = producer.calculate_most_probable_relations(terms)
 
         return labels
+    
+    def analogy(self, source_A, target_A, source_B, topn=10):
+        labels = self.find(source_A, target_A)
+        terms = []
+        for i in range(topn):
+            terms.append(labels[i] + " " + source_B)
+            
+        print(terms)
+        producer = self.__create_label_producer()
+        new_labels = producer.calculate_most_probable_relations(terms)
+        
+        return new_labels
 
     def __create_pairs_evaluator(self, source_word, target_word):
         return PairsEvaluator(self.__model, source_word, target_word)
