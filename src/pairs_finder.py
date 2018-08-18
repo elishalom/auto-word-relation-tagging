@@ -67,7 +67,6 @@ class PairsFinder(object):
         for i in range(topn):
             terms.append(labels[i] + " " + source_B)
             
-        print(terms)
         producer = self.__create_label_producer()
         new_labels = producer.calculate_most_probable_relations(terms)
         

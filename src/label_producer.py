@@ -9,18 +9,41 @@ from nltk.corpus import stopwords
 from nltk.corpus import brown
 from nltk import FreqDist
 from collections import Counter
-from functools import reduce
-
 
 class LabelProducer(object):
     
     __TOTAL_ARTICLES = 5696797 # Number of articles in wikipedia. Used for tf-idf calculation
     __TERM_FREQUENCIES_DICT = {} # Term frequencies for words. Used for tf-idf calculation
     __EXTRACTS_PER_TERM = 20 # Number of document intros to process per search term pair
-    
+    __STOP_WORDS = {} # Words to filter out from results
     
     def __init__(self) -> None:
         super().__init__()
+        nltk.download('stopwords') 
+        nltk.download('brown') 
+        self.__STOP_WORDS = stopwords.words('english')
+        frequencies_file_name = '../data/frequency.pickle'
+        self.__load_term_frequency_dict(frequencies_file_name)
+        
+    def __load_term_frequency_dict(self, frequencies_file_name):
+        """
+        Create or load the frequency dictionary that is used in tf-idf calculation
+        to speed up the calculation
+        
+        Args:
+            The file name from which to load and save the frequency dict
+        """
+        try:
+            print('Loading word frequencies dictionary...')
+            self.__TERM_FREQUENCIES_DICT = pickle.load(open(frequencies_file_name, 'rb'))
+        except:
+            print('Word frequencies dictionary doesn\'t exist; Creating it and saving it to file...')
+            self.__TERM_FREQUENCIES_DICT = FreqDist(word.lower() for word in brown.words())
+            os.makedirs(os.path.dirname(frequencies_file_name), exist_ok=True)
+            with open(frequencies_file_name, 'wb') as handle:
+                pickle.dump(self.__TERM_FREQUENCIES_DICT, handle, protocol = pickle.HIGHEST_PROTOCOL)
+                
+        print('Finished loading word frequencies dictionary')
     
     def __get_wiki_page_list(self, term):
         """
@@ -102,42 +125,39 @@ class LabelProducer(object):
         tf_idf = count * idf
         return tf_idf
 
-    def __filter_words(self, text, stop_words):
+    def __filter_words(self, text):
         """
         Filter out words from the given text
         
         Args:
             text: the text to filter
-            stop_words: a list of words to filter out
         
         Returns:
-            All the words in the text that are not in the stop_words list, have
+            All the words in the text that are not in the stop words list, have
             length greater than 1 and are alphabetical characters
         """
-        return [word for word in text if word not in stop_words and len(word) > 1 and word.isalpha()]
+        return [word for word in text if word not in self.__STOP_WORDS and len(word) > 1 and word.isalpha()]
     
-    def __tokenize(self, text, stop_words):
+    def __tokenize(self, text):
         """
         Tokenize the fiven text
         
         Args:
             text: the text to tokenize
-            stop_words: a list of words to filter out
             
         Returns:
             text after tokenization, conversion to lowercase and filtering of words
             using the filterWords function
         """
-        return self.__filter_words(nltk.word_tokenize(text), stop_words)
+        return self.__filter_words(nltk.word_tokenize(text))
     
-    def __term_counter(self, term, stop_words):
+    def __term_counter(self, term):
         """
         Count the occurrences of different words in the sentences that contain
         all the words of the given term
         
         Args:
             term: the term to query for
-            stop_words: a list of words to filter out
             
         Returns:
             A counter of occurrences of all the unfiltered words that returned from
@@ -146,7 +166,7 @@ class LabelProducer(object):
         res = self.__get_pages(term)
         result_words = []
         for doc in res:
-            result_words += self.__tokenize(doc.lower(), stop_words)
+            result_words += self.__tokenize(doc.lower())
         counter = Counter(result_words)
         return counter
     
@@ -162,32 +182,13 @@ class LabelProducer(object):
             A list of 'topn' labels which represent the relations between the words
             in the terms sorted in descending order of probablity
         """
-    
-        nltk.download('stopwords') 
-        nltk.download('brown') 
-        
-        stop_words = stopwords.words('english')
-        
-        frequencies_file_name = '../data/frequency.pickle'
 
-        term_str = list(map(lambda pair: pair[0] + " " + pair[1], terms))
+        term_str = { ' '.join(pair) for pair in terms }
         
-        try:
-            print('Loading word frequencies dictionary...')
-            self.__TERM_FREQUENCIES_DICT = pickle.load(open(frequencies_file_name, 'rb'))
-        except:
-            print('Word frequencies dictionary doesn\'t exist; Creating it and saving it to file...')
-            self.__TERM_FREQUENCIES_DICT = FreqDist(word.lower() for word in brown.words())
-            os.makedirs(os.path.dirname(frequencies_file_name), exist_ok=True)
-            with open(frequencies_file_name, 'wb') as handle:
-                pickle.dump(self.__TERM_FREQUENCIES_DICT, handle, protocol = pickle.HIGHEST_PROTOCOL)
-                
-        print('Finished loading word frequencies dictionary')
+        terms_set = { word.lower() for term in term_str for word in term.split() }
         
-        terms_set = set([word.lower() for term in term_str for word in term.split()])
-        
-        term_counters = [self.__term_counter(x, stop_words) for x in term_str]
-        all_terms = reduce(lambda s1, s2: s1 | s2, map(lambda d: d.keys(), term_counters)) - terms_set
+        term_counters = [self.__term_counter(x) for x in term_str]
+        all_terms = { k for d in term_counters for k in d.keys() } - terms_set
         all_dict = {}
     
         for term in all_terms:
