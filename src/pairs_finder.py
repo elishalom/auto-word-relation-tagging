@@ -8,8 +8,8 @@ import networkx as nx
 from gensim.models.keyedvectors import Word2VecKeyedVectors
 
 from distance_metric import DistanceMetric
-from pairs_evaluator import PairsEvaluator
 from label_producer import LabelProducer
+from pairs_evaluator import PairsEvaluator
 
 
 class PairsFinder(object):
@@ -76,7 +76,8 @@ class PairsFinder(object):
     def __create_pairs_evaluator(self, source_word, target_word):
         return PairsEvaluator(self.__model, source_word, target_word)
 
-    def __create_label_producer(self):
+    @staticmethod
+    def __create_label_producer():
         return LabelProducer()
 
     def __find_similar_targets(self, similar_source: str, source_word: str,
