@@ -8,6 +8,7 @@ import networkx as nx
 from gensim.models.keyedvectors import Word2VecKeyedVectors
 
 from distance_metric import DistanceMetric
+from label_producer import LabelProducer
 from pairs_evaluator import PairsEvaluator
 
 
@@ -52,10 +53,31 @@ class PairsFinder(object):
 
         g = g.subgraph(v for v, degree in g.degree if degree > 0)
 
-        return list(g.edges)
+        terms = list(g.edges)
+
+        producer = self.__create_label_producer()
+        
+        labels = producer.calculate_most_probable_relations(terms)
+
+        return labels
+    
+    def analogy(self, source_A, target_A, source_B, topn=5):
+        labels = self.find(source_A, target_A)
+        terms = []
+        for i in range(topn):
+            terms.append(labels[i] + " " + source_B)
+            
+        producer = self.__create_label_producer()
+        new_labels = producer.calculate_most_probable_relations(terms)
+        
+        return new_labels
 
     def __create_pairs_evaluator(self, source_word, target_word):
         return PairsEvaluator(self.__model, source_word, target_word)
+
+    @staticmethod
+    def __create_label_producer():
+        return LabelProducer()
 
     def __find_similar_targets(self, similar_source: str, source_word: str,
                                target_word: str, num_of_words: int = 20) -> List[str]:
