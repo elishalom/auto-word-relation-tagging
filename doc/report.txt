@@ -1,0 +1,158 @@
+ %
+% File acl2018.tex
+%
+%% Based on the style files for ACL-2017, with some changes, which were, in turn,
+%% Based on the style files for ACL-2015, with some improvements
+%%  taken from the NAACL-2016 style
+%% Based on the style files for ACL-2014, which were, in turn,
+%% based on ACL-2013, ACL-2012, ACL-2011, ACL-2010, ACL-IJCNLP-2009,
+%% EACL-2009, IJCNLP-2008...
+%% Based on the style files for EACL 2006 by 
+%%e.agirre@ehu.es or Sergi.Balari@uab.es
+%% and that of ACL 08 by Joakim Nivre and Noah Smith
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[hyperref]{acl2018}
+\usepackage{times}
+\usepackage{latexsym}
+
+\setcitestyle{square}
+\setcitestyle{numbers}
+
+\usepackage{url}
+
+\aclfinalcopy % Uncomment this line for the final submission
+%\def\aclpaperid{***} %  Enter the acl Paper ID here
+
+%\setlength\titlebox{5cm}
+% You can expand the titlebox if you need extra space
+% to show all the authors. Please do not make the titlebox
+% smaller than 5cm (the original size); we will check this
+% in the camera-ready version and ask you to change it back.
+
+\newcommand\BibTeX{B{\sc ib}\TeX}
+
+\title{Automatic Tagging of Word Relationships Using Word Embedding}
+
+\author{Roman Tziprun \\
+  {\tt romantzr@gmail.com} \\\And
+  Eli Shalom \\
+  {\tt eli.shalom@gmail.com} \\}
+
+\date{31/8/2018}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+  A great challenge to knowledge construction, manual or automatic, is context understanding. Context can be either the domain or type of entities, of the relationship between entities. For example, "France" and "Paris" are entities of type "Country" and "City" respectively,  and they form a relationship of "Capital". By understanding that the two form a specific relationship, we can improve the efficiency of knowledge construction such as in ontology building, and also improve the performance of semantic-based tasks. In this project we propose an approach for providing textual hints to the context that two entities share.
+\end{abstract}
+\section{Introduction}
+\subsection{Motivation}
+Formal knowledge representation is becoming very useful to many semantic tasks in the domain of AI in general and of NLP in particular. For example, clustering of similar web-pages is a very popular feature among search-engines (such as Google-news), and clustering of similar products is very popular in e-commerce sites (such as Amazon-shopping). Additionally, direct semantics understanding tasks which are ontology-based earn a lot from the richness of the ontology on which they are based. This may come into effect with the broadness of entities represented by the ontology (higher recall), or by increased the granularity of entities (higher precision), or by wider relationships representation (improved accuracy).\\
+Constructing knowledge is an expensive task. Manual construction requires ontologists to process and formalize information. In Cyc for example, hundreds of person-years were invested and the estimation is that 2000 person years are required to completion. Automatic construction, at the moment, is limited in capabilities and  the successful methods yield mostly entity types and common instances of relations.
+\subsection{Goal}
+Our project's goal is to reduce the effort required to discover and represent relations between entities in an ontology. We assume that a process for construction already exists and that it requires research from the ontologist. For example, in a geography ontology the entities "France" and "Paris" are expected to appear. Assume very little prior knowledge (very much in this case), then some research is required to figure out that the two entities form some relation and that this relation is "capital-of".\\
+We aim to reduce the effort required to understand the existence and details of such relations.
+\subsection{High-level approach}
+We rely on following assumptions:
+\begin{enumerate}
+\item It is easier to understand using analogies
+\item Analogies can be extracted through Word2vec model
+\item A wide and search-able corpus is available
+\end{enumerate}
+The project aims to provide an understandable context through generalization. The generalization is based on two phases. Firstly, the system receives a pair of terms and using Word2vec extracts pairs that are likely to be analogical to the original pair. A fuzzy comparison on diff vector is used to determine which pairs may form an analogy. Secondly, it searches the corpus for all the documents contains the pairs. The matching documents form a unique vocabulary from which a "pattern" arise. The "pattern" starts from a set of common terms that appear in most documents. The terms are ranked using several heuristics so the most descriptive ones appear on top.
+\section{System overview}
+The system we developed consists of two parts. The first component (henceforth, referred to as the pairs finder) receives the 
+input which is two words (henceforth, referred to as the source $s$ and the target $t$) and creates a list of word pairs having a 
+similar relation as the relation between $t$ and $s$ by constructing a bipartite graph $G$ in the following manner: 
+A word embedding is used to find similar\_sources, a list of 20 words that are most similar to $s$. Let $vec(w)$ be the embedding of the 
+word $w$ in the vector space. For each word $w$ in similar\_sources, we look for 20 words that has a similar relation to $w$ as the 
+relation between $t$ and $s$, this will be the list similar\_targets. This is done by calculating $v = vec(w) + vec(t) - vec(s)$ and 
+looking for the 20 closest words to v. then, from similar\_targets, the word w' which is closest to w is taken, and the edge $e=(w, w')$ is added 
+to $G$ with $weight(e)$ being the cosine distance between them. Then, vertices with degree higher than 4 are removed from the graph to reduce 
+ambiguity. Finally, a maximal matching is computed on the graph by removing the heaviest edges iteratively until there is no vertex 
+with degree higher than 1. This matching constitutes the list of terms which is passed to the next component.
+
+The second component (henceforth, referred to as the label producer) receives this list of pairs as an input and produces a list of words 
+which describe the relation between the words in every pair. Let $x$ and $x'$ be a pair of words in the list returned by the pairs finder.
+The label producer queries a large corpus (English Wikipedia) for the term "$x$ $x'$" and gets a set of 20 most relevant pages for this term.
+For every page, a list $L$ of words which appear in all sentences that contain both $x$ and $x'$ is produced. Then, a tf-idf metric is calculated
+on these words where the term frequency of a word $y$ is is the number of occurrences of $y$ in all sentences containing both $x$ and $x'$ across all 
+20 pages of the given term. In the last step, a product of all tf-idf values of the same words across the result lists $L$ of all pairs is calculated, 
+and the results are ordered by the highest tf-idf product in descending order, which gives the label list.
+\section{Highly recommended}
+\subsection{Pairs finding}
+This is an intermediate step towards labeling. Given \textit{germany} and \textit{berlin}, the module extracts:
+\begin{tabular}{ l l }
+  austria & vienna \\
+  slovakia & bratislava \\
+  denmark & copenhagen \\
+  netherlands & amsterdam \\
+  poland & warsaw \\
+  france & paris \\
+  russia & moscow \\
+  hungary & budapest \\
+  britain & london
+
+\end{tabular}
+
+\subsection{Relation labeling}
+This is the main step that given analogies generates candidate terms to label the relation. given the list of analogies generated for \textit{germany} and \textit{berlin}, the modules yields:
+\begin{enumerate}
+\item \textbf{city}
+\item \textbf{capital}
+\item largest
+\item known
+\item airport
+\item one
+\item located
+\item centre
+\item listen
+\item international
+\end{enumerate}
+As can be seen, the first two terms are the expected ones to describe the intuitive relationship between \textit{germany} and \textit{berlin}. Since the candidates are sorted by importance, this result is satisfying.
+
+\section{Data, methods and Language-specificity}
+The system assumes that a word embedding is provided where:
+\begin{enumerate}
+\item Words preserve distance, meaning that words that are more similar are closer to one another in the vector space (using a metric like cosine similarity) 
+than words that are less similar, where similarity can be defined by context and distributional properties. For example if two words can be 
+interchangeable in most context they might be considered very similar \cite{mikolov2013linguistic}.
+\item Words preserve analogies, meaning that by calculating $v = vec(x) - vec(y) + vec(z)$, we get that the word $w$ for which $vec(w)$ is 
+closest to $v$ should preserve the analogy $x:y::v:z$. For example the vector closest to $v = vec("Brother") - vec("Man") + vec("Woman")$ should be 
+the embedding of the word "Sister" \cite{mikolov2013linguistic}.
+\end{enumerate}
+
+Such a word embedding is produced by an unsupervised learning algorithm (e.g. word2vec, GloVe, fastText) where the training set is some large 
+corpus (e.g. Wikipedia). To achieve domain specific labels for topics like music, science, history, etc, a word embedding can be produced on a topical 
+corpus (e.g. Wikipedia articles related to a specific category). A domain specific embedding can mitigate issues caused by ambiguity since a 
+single word can have multiple meanings in a language but will only have a single vector embedding \cite{shi2017jointly}.
+
+The word embedding is used in the pairs finder component. For simplicity, we used an already train word embedding. Specifically the GloVe model trained 
+on Wikipedia with an embedding vector space of dimension $n=50$. The label producer component also uses Wikipedia as a large corpus to generate the 
+labels from. It is important to note that our system can be extended to any language simply by changing the trained word vector model to a model 
+of a different language and also querying a different language Wikipedia instead of the English one, though some morphological analysis such as 
+stemming might be required for other languages \cite{cotterell2015morphological}.
+
+\section{Innovation}
+
+\section{Comparison to known analogies extraction tasks}
+
+\section{Evaluation}
+
+\section{What was learned by this project}
+
+\section{Challenges}
+
+
+% include your own bib file like this:
+%\bibliographystyle{acl}
+%\bibliographystyle{numbers}
+%\bibliography{acl2018}
+\bibliography{acl2018}
+
+\bibliographystyle{acl_natbib}
+
+\appendix
+
+\end{document}
