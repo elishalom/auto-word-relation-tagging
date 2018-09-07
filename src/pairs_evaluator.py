@@ -1,7 +1,11 @@
+import warnings
+
 from gensim.models.keyedvectors import Word2VecKeyedVectors
 from scipy.spatial.distance import euclidean, cosine
 
 from distance_metric import DistanceMetric
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 class PairsEvaluator(object):

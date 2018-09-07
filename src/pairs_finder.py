@@ -21,26 +21,38 @@ class PairsFinder(object):
         self.__model: Word2VecKeyedVectors = api.load(self.__DEFAULT_MODEL_NAME)
 
     def find(self, word1, word2):
-        source_word = word1
-        target_word = word2
+        source_word = word1.lower()
+        target_word = word2.lower()
 
-        evaluator = self.__create_pairs_evaluator(source_word, target_word)
+        try:
+            evaluator = self.__create_pairs_evaluator(source_word, target_word)
 
-        similar_sources = self.__extract_similar_sources(source_word)
-        g = nx.DiGraph()
-        g.add_weighted_edges_from([(source_word, target_word, 0)])
-        for similar_source in similar_sources:
-            similar_targets = self.__find_similar_targets(similar_source, source_word, target_word)
+            similar_sources = self.__extract_similar_sources(source_word)
+            g = nx.DiGraph()
+            g.add_weighted_edges_from([(source_word, target_word, 0)])
+            for similar_source in similar_sources:
+                similar_targets = self.__find_similar_targets(similar_source, source_word, target_word)
 
-            best_targets = sorted(similar_targets,
-                                  key=lambda similar_target: evaluator.distance(similar_source, similar_target))[:1]
-            for best_target in best_targets:
-                if evaluator.are_similar(similar_source, best_target):
-                    g.add_edge(similar_source, best_target, weight=evaluator.distance(similar_source, best_target,
-                                                                                      metric=DistanceMetric.COSINE))
+                best_targets = sorted(similar_targets,
+                                      key=lambda similar_target: evaluator.distance(similar_source, similar_target))[:1]
+                for best_target in best_targets:
+                    if evaluator.are_similar(similar_source, best_target):
+                        g.add_edge(similar_source, best_target, weight=evaluator.distance(similar_source, best_target,
+                                                                                          metric=DistanceMetric.COSINE))
 
+            terms = self.__resolve_ambiguities(g)
+
+            producer = self.__create_label_producer()
+
+            labels = producer.calculate_most_probable_relations(terms)
+        except:
+            labels = []
+
+        return labels
+
+    @staticmethod
+    def __resolve_ambiguities(g):
         g: nx.DiGraph = g.subgraph(v for v, degree in g.degree if degree <= 4).copy()
-
         while any(degree > 1 for _, degree in g.degree):
             undecided_nodes = [v for v, degree in g.degree if degree > 1]
             contesting_edges = chain(g.in_edges(undecided_nodes, data='weight'),
@@ -50,17 +62,10 @@ class PairsFinder(object):
             g.remove_edges_from(list(g.in_edges(source)))
             g.remove_edges_from([(s, t) for s, t in g.in_edges(target) if s != source])
             g.remove_edges_from(list(g.out_edges(source)))
-
         g = g.subgraph(v for v, degree in g.degree if degree > 0)
-
         terms = list(g.edges)
+        return terms
 
-        producer = self.__create_label_producer()
-        
-        labels = producer.calculate_most_probable_relations(terms)
-
-        return labels
-    
     def analogy(self, source_A, target_A, source_B, topn=5):
         labels = self.find(source_A, target_A)
         terms = []
